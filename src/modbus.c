@@ -1802,6 +1802,11 @@ int modbus_mask_write_register(modbus_t *ctx,
      * (2 bytes) which is not used. */
     uint8_t req[_MIN_REQ_LENGTH + 2];
 
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
     req_length = ctx->backend->build_request_basis(
         ctx, MODBUS_FC_MASK_WRITE_REGISTER, addr, 0, req);
 
