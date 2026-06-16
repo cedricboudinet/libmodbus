@@ -798,6 +798,8 @@ int modbus_reply(modbus_t *ctx,
     uint8_t rsp[MAX_MESSAGE_LENGTH];
     int rsp_length = 0;
     sft_t sft;
+    uint8_t meta_length;
+    int data_length;
 
     if (ctx == NULL || req == NULL || mb_mapping == NULL) {
         errno = EINVAL;
@@ -805,6 +807,14 @@ int modbus_reply(modbus_t *ctx,
     }
 
     offset = ctx->backend->header_length;
+
+    /* The request must contain at least a slave address and a function code
+       before they can be read. */
+    if (req_length < (int) (offset + 1)) {
+        errno = EMBBADDATA;
+        return -1;
+    }
+
     slave = req[offset - 1];
     function = req[offset];
 
@@ -821,6 +831,37 @@ int modbus_reply(modbus_t *ctx,
     sft.slave = slave;
     sft.function = function;
     sft.t_id = ctx->backend->get_response_tid(req);
+
+    /* Ensure the request is long enough to contain the meta fields (address,
+       quantity, byte count...) and the declared data read by the handlers
+       below. On the canonical modbus_receive() path the framing layer already
+       guarantees a complete PDU; this check defends direct callers that pass a
+       truncated or untrusted request to modbus_reply(). */
+    meta_length = compute_meta_length_after_function(function, MSG_INDICATION);
+    data_length = 0;
+    if (req_length >= (int) (offset + 1 + meta_length)) {
+        /* The meta fields (including the byte count) are present, so the
+           declared data length can be read safely. */
+        data_length = compute_data_length_after_meta(ctx, (uint8_t *) req, MSG_INDICATION);
+    }
+    if (req_length < (int) (offset + 1 + meta_length + data_length)) {
+        rsp_length = response_exception(ctx,
+                                        &sft,
+                                        MODBUS_EXCEPTION_ILLEGAL_DATA_VALUE,
+                                        rsp,
+                                        TRUE,
+                                        "Truncated request (length %d) for function "
+                                        "0x%0X in modbus_reply\n",
+                                        req_length,
+                                        function);
+        /* Suppress responses to broadcasts in RTU, see below. */
+        if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU &&
+            slave == MODBUS_BROADCAST_ADDRESS &&
+            !(ctx->quirks & MODBUS_QUIRK_REPLY_TO_BROADCAST)) {
+            return 0;
+        }
+        return send_msg(ctx, rsp, rsp_length);
+    }
 
     /* Data are flushed on illegal number of values errors. */
     switch (function) {
