@@ -244,13 +244,22 @@ static void _modbus_rtu_ioctl_rts(modbus_t *ctx, int on)
     int fd = ctx->s;
     int flags;
 
-    ioctl(fd, TIOCMGET, &flags);
+    if (ioctl(fd, TIOCMGET, &flags) == -1) {
+        if (ctx->debug) {
+            fprintf(stderr, "ERROR Can't get RTS line state (%s)\n", strerror(errno));
+        }
+        return;
+    }
     if (on) {
         flags |= TIOCM_RTS;
     } else {
         flags &= ~TIOCM_RTS;
     }
-    ioctl(fd, TIOCMSET, &flags);
+    if (ioctl(fd, TIOCMSET, &flags) == -1) {
+        if (ctx->debug) {
+            fprintf(stderr, "ERROR Can't set RTS line state (%s)\n", strerror(errno));
+        }
+    }
 }
 #endif
 
