@@ -1299,8 +1299,8 @@ modbus_new_rtu(const char *device, int baud, char parity, int data_bit, int stop
     }
 
     /* Check baud argument */
-    if (baud == 0) {
-        fprintf(stderr, "The baud rate value must not be zero\n");
+    if (baud <= 0) {
+        fprintf(stderr, "The baud rate value must be strictly positive\n");
         errno = EINVAL;
         return NULL;
     }
