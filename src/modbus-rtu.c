@@ -685,10 +685,20 @@ static int _modbus_rtu_connect(modbus_t *ctx)
 
     /* Save */
 #ifdef HAVE_STRUCT_TERMIOS2
-    ioctl(ctx->s, TCGETS2, &ctx_rtu->old_tios);
+    if (ioctl(ctx->s, TCGETS2, &ctx_rtu->old_tios) < 0) {
 #else
-    tcgetattr(ctx->s, &ctx_rtu->old_tios);
+    if (tcgetattr(ctx->s, &ctx_rtu->old_tios) < 0) {
 #endif
+        if (ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Can't save the termios settings of %s (%s)\n",
+                    ctx_rtu->device,
+                    strerror(errno));
+        }
+        close(ctx->s);
+        ctx->s = -1;
+        return -1;
+    }
 
     memset(&tios, 0, sizeof(tios));
 
