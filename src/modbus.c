@@ -1922,7 +1922,7 @@ int modbus_report_slave_id(modbus_t *ctx, int max_dest, uint8_t *dest)
     int req_length;
     uint8_t req[_MIN_REQ_LENGTH];
 
-    if (ctx == NULL || max_dest <= 0) {
+    if (ctx == NULL || dest == NULL || max_dest <= 0) {
         errno = EINVAL;
         return -1;
     }
