@@ -1174,13 +1174,21 @@ static void _modbus_rtu_close(modbus_t *ctx)
     }
 #elif defined(HAVE_STRUCT_TERMIOS2)
     if (ctx->s >= 0) {
-        ioctl(ctx->s, TCSETS2, &ctx_rtu->old_tios);
+        if (ioctl(ctx->s, TCSETS2, &ctx_rtu->old_tios) < 0 && ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Can't restore the termios settings (%s)\n",
+                    strerror(errno));
+        }
         close(ctx->s);
         ctx->s = -1;
     }
 #else
     if (ctx->s >= 0) {
-        tcsetattr(ctx->s, TCSANOW, &ctx_rtu->old_tios);
+        if (tcsetattr(ctx->s, TCSANOW, &ctx_rtu->old_tios) < 0 && ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Can't restore the termios settings (%s)\n",
+                    strerror(errno));
+        }
         close(ctx->s);
         ctx->s = -1;
     }
