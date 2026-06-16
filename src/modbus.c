@@ -1242,6 +1242,152 @@ int modbus_reply_exception(modbus_t *ctx, const uint8_t *req, unsigned int excep
     }
 }
 
+/* Forward a request received on one context to another and relay the response back.
+   This function is useful to implement a Modbus gateway/proxy that bridges
+   two different backends (eg. TCP to RTU). */
+int modbus_proxy(modbus_t *frontend_ctx,
+                 modbus_t *backend_ctx,
+                 const uint8_t *req,
+                 int req_length)
+{
+    int rc;
+    int frontend_header_length;
+    int frontend_checksum_length;
+    int backend_header_length;
+    int backend_checksum_length;
+    int pdu_length;
+    uint8_t backend_req[MAX_MESSAGE_LENGTH];
+    int backend_req_length;
+    uint8_t backend_rsp[MAX_MESSAGE_LENGTH];
+    int backend_rsp_length;
+    uint8_t frontend_rsp[MAX_MESSAGE_LENGTH];
+    int frontend_rsp_length;
+    sft_t sft;
+
+    if (frontend_ctx == NULL || backend_ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (req == NULL || req_length < 1) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    frontend_header_length = frontend_ctx->backend->header_length;
+    frontend_checksum_length = frontend_ctx->backend->checksum_length;
+    backend_header_length = backend_ctx->backend->header_length;
+    backend_checksum_length = backend_ctx->backend->checksum_length;
+
+    /* Extract the PDU (slave + function + data) from the frontend request.
+       The PDU sits between the header and the checksum. */
+    pdu_length = req_length - frontend_header_length - frontend_checksum_length;
+    if (pdu_length < 1 || pdu_length > MODBUS_MAX_PDU_LENGTH + 1) {
+        errno = EMBBADDATA;
+        return -1;
+    }
+
+    /* Set the slave address on the backend context */
+    rc = modbus_set_slave(backend_ctx, req[frontend_header_length - 1]);
+    if (rc == -1) {
+        modbus_reply_exception(frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_PATH);
+        return -1;
+    }
+
+    /* Build a raw request for the backend from the PDU.
+       The raw request for modbus_send_raw_request is: slave + function + data
+       (ie. the PDU from the frontend request, starting at header_length - 1). */
+    if (pdu_length + 1 > MAX_MESSAGE_LENGTH) {
+        errno = EMBBADDATA;
+        return -1;
+    }
+    memcpy(backend_req, req + frontend_header_length - 1, pdu_length + 1);
+    backend_req_length = pdu_length + 1;
+
+    /* Preserve the transaction ID from the frontend request */
+    sft.slave = backend_req[0];
+    sft.function = backend_req[1];
+    sft.t_id = frontend_ctx->backend->get_response_tid(req);
+
+    /* Send the request to the backend device using raw request.
+       modbus_send_raw_request_tid wraps the PDU into the backend framing. */
+    rc = modbus_send_raw_request_tid(
+        backend_ctx, backend_req, backend_req_length, 0);
+    if (rc == -1) {
+        modbus_reply_exception(frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_PATH);
+        return -1;
+    }
+
+    /* Receive the response from the backend */
+    backend_rsp_length = _modbus_receive_msg(backend_ctx, backend_rsp, MSG_CONFIRMATION);
+    if (backend_rsp_length == -1) {
+        if (errno == ETIMEDOUT)
+            modbus_reply_exception(
+                frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_TARGET);
+        else
+            modbus_reply_exception(
+                frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_PATH);
+        return -1;
+    }
+
+    /* Check the backend response integrity */
+    if (backend_ctx->backend->pre_check_confirmation) {
+        /* Build a minimal req for the pre_check (only header matters for TID/slave check).
+           We reuse the backend_req buffer which still holds our sent data. */
+        uint8_t check_req[MAX_MESSAGE_LENGTH];
+        int check_req_length;
+        sft_t check_sft;
+
+        check_sft.slave = sft.slave;
+        check_sft.function = sft.function;
+        check_sft.t_id = 0;
+        check_req_length = backend_ctx->backend->build_response_basis(&check_sft, check_req);
+        /* Append enough data so the length is valid */
+        if (backend_req_length > 2) {
+            memcpy(check_req + check_req_length, backend_req + 2, backend_req_length - 2);
+            check_req_length += backend_req_length - 2;
+        }
+
+        rc = backend_ctx->backend->pre_check_confirmation(
+            backend_ctx, check_req, backend_rsp, backend_rsp_length);
+        if (rc == -1) {
+            modbus_reply_exception(
+                frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_TARGET);
+            return -1;
+        }
+    }
+
+    /* Extract the PDU from the backend response and wrap it for the frontend.
+       Backend response layout: [header][function][data...][checksum] */
+    pdu_length =
+        backend_rsp_length - backend_header_length - backend_checksum_length;
+    if (pdu_length < 1) {
+        modbus_reply_exception(
+            frontend_ctx, req, MODBUS_EXCEPTION_GATEWAY_TARGET);
+        return -1;
+    }
+
+    /* Build the frontend response: use the original slave and function from the
+       backend response, and the transaction ID from the frontend request. */
+    sft.slave = backend_rsp[backend_header_length - 1];
+    sft.function = backend_rsp[backend_header_length];
+    /* sft.t_id was already set from the frontend request above */
+
+    frontend_rsp_length =
+        frontend_ctx->backend->build_response_basis(&sft, frontend_rsp);
+
+    /* Copy the remaining PDU data (everything after function code) */
+    if (pdu_length > 1) {
+        int data_length = pdu_length - 1;
+        memcpy(frontend_rsp + frontend_rsp_length,
+               backend_rsp + backend_header_length + 1,
+               data_length);
+        frontend_rsp_length += data_length;
+    }
+
+    return send_msg(frontend_ctx, frontend_rsp, frontend_rsp_length);
+}
+
 /* Reads IO status */
 static int read_io_status(modbus_t *ctx, int function, int addr, int nb, uint8_t *dest)
 {

@@ -184,6 +184,10 @@ Reply:
 - [modbus_reply](modbus_reply.md)
 - [modbus_reply_exception](modbus_reply_exception.md)
 
+Proxy:
+
+- [modbus_proxy](modbus_proxy.md)
+
 ## Advanced functions
 
 Timeout settings:
