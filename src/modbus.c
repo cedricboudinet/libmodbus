@@ -1259,7 +1259,7 @@ int modbus_reply_exception(modbus_t *ctx, const uint8_t *req, unsigned int excep
     int rsp_length;
     sft_t sft;
 
-    if (ctx == NULL) {
+    if (ctx == NULL || req == NULL) {
         errno = EINVAL;
         return -1;
     }
