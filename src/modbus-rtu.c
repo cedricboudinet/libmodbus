@@ -272,12 +272,22 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
             fprintf(stderr, "Sending request using RTS signal\n");
         }
 
+        uint64_t total_delay;
+
         ctx_rtu->set_rts(ctx, ctx_rtu->rts == MODBUS_RTU_RTS_UP);
         usleep(ctx_rtu->rts_delay);
 
         size = write(ctx->s, req, req_length);
 
-        usleep(ctx_rtu->onebyte_time * req_length + ctx_rtu->rts_delay);
+        /* Compute the post-send delay in a wide unsigned type to avoid the
+           signed overflow that occurs with a very low baud (large
+           onebyte_time) and a large request, then clamp to a sane maximum. */
+        total_delay = (uint64_t) ctx_rtu->onebyte_time * (uint64_t) req_length +
+                      (uint64_t) ctx_rtu->rts_delay;
+        if (total_delay > 1000000000ULL) {
+            total_delay = 1000000000ULL;
+        }
+        usleep((useconds_t) total_delay);
         ctx_rtu->set_rts(ctx, ctx_rtu->rts != MODBUS_RTU_RTS_UP);
 
         return size;
