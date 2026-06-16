@@ -1051,7 +1051,7 @@ int modbus_rtu_set_rts(modbus_t *ctx, int mode)
 
 int modbus_rtu_set_custom_rts(modbus_t *ctx, void (*set_rts)(modbus_t *ctx, int on))
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || set_rts == NULL) {
         errno = EINVAL;
         return -1;
     }
