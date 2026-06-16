@@ -26,6 +26,10 @@
 /* Internal use */
 #define MSG_LENGTH_UNDEFINED -1
 
+/* The Modbus address space is 16-bit, so a mapping table cannot hold more
+   than 65536 entries. */
+#define MODBUS_MAX_TABLE_SIZE 65536
+
 /* Exported version */
 const unsigned int libmodbus_version_major = LIBMODBUS_VERSION_MAJOR;
 const unsigned int libmodbus_version_minor = LIBMODBUS_VERSION_MINOR;
@@ -2200,6 +2204,15 @@ modbus_mapping_t *modbus_mapping_new_start_address(unsigned int start_bits,
 {
     modbus_mapping_t *mb_mapping;
 
+    /* Reject dimensions larger than the addressable space to avoid excessively
+       large allocations driven by untrusted configuration. */
+    if (nb_bits > MODBUS_MAX_TABLE_SIZE || nb_input_bits > MODBUS_MAX_TABLE_SIZE ||
+        nb_registers > MODBUS_MAX_TABLE_SIZE ||
+        nb_input_registers > MODBUS_MAX_TABLE_SIZE) {
+        errno = EINVAL;
+        return NULL;
+    }
+
     mb_mapping = (modbus_mapping_t *) malloc(sizeof(modbus_mapping_t));
     if (mb_mapping == NULL) {
         return NULL;
@@ -2211,7 +2224,6 @@ modbus_mapping_t *modbus_mapping_new_start_address(unsigned int start_bits,
     if (nb_bits == 0) {
         mb_mapping->tab_bits = NULL;
     } else {
-        /* Negative number raises a POSIX error */
         mb_mapping->tab_bits = (uint8_t *) malloc(nb_bits * sizeof(uint8_t));
         if (mb_mapping->tab_bits == NULL) {
             free(mb_mapping);
