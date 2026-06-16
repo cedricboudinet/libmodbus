@@ -799,7 +799,7 @@ int modbus_reply(modbus_t *ctx,
     int rsp_length = 0;
     sft_t sft;
 
-    if (ctx == NULL) {
+    if (ctx == NULL || req == NULL || mb_mapping == NULL) {
         errno = EINVAL;
         return -1;
     }
