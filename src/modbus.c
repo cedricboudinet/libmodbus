@@ -1851,7 +1851,7 @@ int modbus_write_and_read_registers(modbus_t *ctx,
     uint8_t req[MAX_MESSAGE_LENGTH];
     uint8_t rsp[MAX_MESSAGE_LENGTH];
 
-    if (ctx == NULL) {
+    if (ctx == NULL || src == NULL || dest == NULL || write_nb < 1 || read_nb < 1) {
         errno = EINVAL;
         return -1;
     }
