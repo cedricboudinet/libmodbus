@@ -1337,11 +1337,9 @@ int modbus_proxy(modbus_t *frontend_ctx,
 
     /* Build a raw request for the backend from the PDU.
        The raw request for modbus_send_raw_request is: slave + function + data
-       (ie. the PDU from the frontend request, starting at header_length - 1). */
-    if (pdu_length + 1 > MAX_MESSAGE_LENGTH) {
-        errno = EMBBADDATA;
-        return -1;
-    }
+       (ie. the PDU from the frontend request, starting at header_length - 1).
+       pdu_length is bounded above by the check on MODBUS_MAX_PDU_LENGTH, so
+       pdu_length + 1 always fits in backend_req[MAX_MESSAGE_LENGTH]. */
     memcpy(backend_req, req + frontend_header_length - 1, pdu_length + 1);
     backend_req_length = pdu_length + 1;
 
