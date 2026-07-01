@@ -349,6 +349,25 @@ int main(int argc, char *argv[])
     real = modbus_get_float_cdab(UT_IREAL_CDAB);
     ASSERT_TRUE(real == UT_REAL, "FAILED (%f != %f)\n", real, UT_REAL);
 
+    /* Regression: a negative float has its most significant byte >= 0x80, so
+       the "a << 24" byte assembly in modbus_get_float_*() overflows a signed
+       int (undefined behavior) unless done in unsigned width. UT_REAL is
+       positive (0x47F12000) and never exercised this path; -UT_REAL
+       (0xC7F12000) does. Build with -fsanitize=undefined to catch the UB. */
+    printf("Get negative float ABCD/DCBA/BADC/CDAB: ");
+    {
+        const uint16_t ireal_neg_abcd[] = {0xC7F1, 0x2000};
+        const uint16_t ireal_neg_dcba[] = {0x0020, 0xF1C7};
+        const uint16_t ireal_neg_badc[] = {0xF1C7, 0x0020};
+        const uint16_t ireal_neg_cdab[] = {0x2000, 0xC7F1};
+
+        ASSERT_TRUE(modbus_get_float_abcd(ireal_neg_abcd) == -UT_REAL &&
+                        modbus_get_float_dcba(ireal_neg_dcba) == -UT_REAL &&
+                        modbus_get_float_badc(ireal_neg_badc) == -UT_REAL &&
+                        modbus_get_float_cdab(ireal_neg_cdab) == -UT_REAL,
+                    "FAILED negative float get\n");
+    }
+
     printf("\nAt this point, error messages doesn't mean the test has failed\n");
 
     /** ILLEGAL DATA ADDRESS **/

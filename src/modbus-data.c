@@ -92,7 +92,11 @@ float modbus_get_float_abcd(const uint16_t *src)
     d = (src[1] >> 0) & 0xFF; // low byte of second word
 
     // we assemble 32bit integer always in abcd order via shift operations
-    i = (a << 24) | (b << 16) | (c << 8) | (d << 0);
+    // Cast to uint32_t before shifting: a..d promote to signed int, and
+    // "a << 24" with a >= 0x80 would overflow a 32-bit signed int (undefined
+    // behavior). Assembling in unsigned width keeps it well-defined. The same
+    // applies to the identical assembly in the dcba/badc/cdab variants below.
+    i = ((uint32_t) a << 24) | ((uint32_t) b << 16) | ((uint32_t) c << 8) | d;
     memcpy(&f, &i, 4);
 
     return f;
@@ -112,7 +116,7 @@ float modbus_get_float_dcba(const uint16_t *src)
     a = (src[1] >> 0) & 0xFF;
 
     // we assemble 32bit integer always in abcd order via shift operations
-    i = (a << 24) | (b << 16) | (c << 8) | (d << 0);
+    i = ((uint32_t) a << 24) | ((uint32_t) b << 16) | ((uint32_t) c << 8) | d;
     memcpy(&f, &i, 4);
 
     return f;
@@ -132,7 +136,7 @@ float modbus_get_float_badc(const uint16_t *src)
     c = (src[1] >> 0) & 0xFF;
 
     // we assemble 32bit integer always in abcd order via shift operations
-    i = (a << 24) | (b << 16) | (c << 8) | (d << 0);
+    i = ((uint32_t) a << 24) | ((uint32_t) b << 16) | ((uint32_t) c << 8) | d;
     memcpy(&f, &i, 4);
 
     return f;
@@ -152,7 +156,7 @@ float modbus_get_float_cdab(const uint16_t *src)
     b = (src[1] >> 0) & 0xFF;
 
     // we assemble 32bit integer always in abcd order via shift operations
-    i = (a << 24) | (b << 16) | (c << 8) | (d << 0);
+    i = ((uint32_t) a << 24) | ((uint32_t) b << 16) | ((uint32_t) c << 8) | d;
     memcpy(&f, &i, 4);
 
     return f;
