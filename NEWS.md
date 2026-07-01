@@ -23,6 +23,20 @@
 - Fix test to use `ctx` instead of `invalid_ctx` (closes #791, #792).
 - Update documentation of float functions (closes #838).
 - Fix documentation examples of `modbus_get_float_*` functions.
+- `modbus_reply_exception`: reject a NULL request pointer.
+- `modbus_mask_write_register`: validate that `ctx` is not NULL.
+- `modbus_write_and_read_registers`: validate `src`/`dest` pointers and counts.
+- `modbus_report_slave_id`: reject a NULL `dest` buffer.
+- `modbus_get_*_timeout`: validate that the output pointers are not NULL.
+- `modbus_mapping_new_start_address`: cap table dimensions.
+- `modbus_mapping_new`: reject negative counts.
+- `modbus_rtu_set_custom_rts`: reject a NULL callback.
+- modbus-rtu: avoid integer overflow in the RTS post-send delay.
+- modbus-rtu: check the return values of the RTS ioctl calls.
+- modbus-rtu: check the return value when saving termios settings on connect.
+- modbus-rtu: report a failure to restore termios settings on close.
+- `modbus_new_rtu`: reject negative baud rates.
+- modbus-tcp: guard `freeaddrinfo()` against NULL on resolver failure.
 
 ## libmodbus 3.1.12 (2026-02-13)
 
