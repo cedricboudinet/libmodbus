@@ -171,12 +171,14 @@ float modbus_get_float(const uint16_t *src)
 /* Set a float to 4 bytes for Modbus w/o any conversion (ABCD) */
 void modbus_set_float_abcd(float f, uint16_t *dest)
 {
-    // The straight-forward type conversion won't work because of type-punned pointer aliasing warning
-    // uint32_t i = *(uint32_t*)(&f);
-    float * fptr = &f;
-    uint32_t * iptr = (uint32_t *)fptr;
-    uint32_t i = *iptr;
+    // Use memcpy for the type conversion: accessing a float through a uint32_t
+    // lvalue (the old *(uint32_t*)&f trick) violates strict aliasing and is
+    // undefined behavior. This mirrors the modbus_get_float_* functions and
+    // compiles to the same load. Same applies to the dcba/badc/cdab variants.
+    uint32_t i;
     uint8_t a, b, c, d;
+
+    memcpy(&i, &f, 4);
 
     a = (i >> 24) & 0xFF;
     b = (i >> 16) & 0xFF;
@@ -190,10 +192,10 @@ void modbus_set_float_abcd(float f, uint16_t *dest)
 /* Set a float to 4 bytes for Modbus with byte and word swap conversion (DCBA) */
 void modbus_set_float_dcba(float f, uint16_t *dest)
 {
-    float * fptr = &f;
-    uint32_t * iptr = (uint32_t *)fptr;
-    uint32_t i = *iptr;
+    uint32_t i;
     uint8_t a, b, c, d;
+
+    memcpy(&i, &f, 4);
 
     a = (i >> 24) & 0xFF;
     b = (i >> 16) & 0xFF;
@@ -207,10 +209,10 @@ void modbus_set_float_dcba(float f, uint16_t *dest)
 /* Set a float to 4 bytes for Modbus with byte swap conversion (BADC) */
 void modbus_set_float_badc(float f, uint16_t *dest)
 {
-    float * fptr = &f;
-    uint32_t * iptr = (uint32_t *)fptr;
-    uint32_t i = *iptr;
+    uint32_t i;
     uint8_t a, b, c, d;
+
+    memcpy(&i, &f, 4);
 
     a = (i >> 24) & 0xFF;
     b = (i >> 16) & 0xFF;
@@ -224,10 +226,10 @@ void modbus_set_float_badc(float f, uint16_t *dest)
 /* Set a float to 4 bytes for Modbus with word swap conversion (CDAB) */
 void modbus_set_float_cdab(float f, uint16_t *dest)
 {
-    float * fptr = &f;
-    uint32_t * iptr = (uint32_t *)fptr;
-    uint32_t i = *iptr;
+    uint32_t i;
     uint8_t a, b, c, d;
+
+    memcpy(&i, &f, 4);
 
     a = (i >> 24) & 0xFF;
     b = (i >> 16) & 0xFF;
