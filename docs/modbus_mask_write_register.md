@@ -24,6 +24,10 @@ The function uses the Modbus function code 0x16 (mask single register).
 The function shall return 1 if successful. Otherwise it shall return -1 and set
 errno.
 
+## Errors
+
+- *EINVAL*, the context is NULL.
+
 ## See also
 
 - [modbus_read_registers](modbus_read_registers.md)

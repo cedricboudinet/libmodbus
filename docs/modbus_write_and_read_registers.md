@@ -34,6 +34,7 @@ it shall return -1 and set errno.
 
 ## Errors
 
+- *EINVAL*, the context is NULL, `src` or `dest` is NULL, or `write_nb` / `read_nb` is less than 1.
 - *EMBXILVAL*, too many registers requested, Too many registers to write
 
 ## See also
