@@ -1308,6 +1308,20 @@ modbus_new_rtu(const char *device, int baud, char parity, int data_bit, int stop
         return NULL;
     }
 
+    /* Check data_bit argument */
+    if (data_bit < 5 || data_bit > 8) {
+        fprintf(stderr, "The number of data bits must be between 5 and 8\n");
+        errno = EINVAL;
+        return NULL;
+    }
+
+    /* Check stop_bit argument */
+    if (stop_bit != 1 && stop_bit != 2) {
+        fprintf(stderr, "The number of stop bits must be 1 or 2\n");
+        errno = EINVAL;
+        return NULL;
+    }
+
     ctx = (modbus_t *) malloc(sizeof(modbus_t));
     if (ctx == NULL) {
         return NULL;
