@@ -1151,12 +1151,9 @@ int modbus_reply(modbus_t *ctx,
                                    "Illegal data address 0x%0X in write_register\n",
                                    address);
         } else {
-            uint16_t data = mb_mapping->tab_registers[mapping_address];
+            uint16_t data;
             uint16_t and = (req[offset + 3] << 8) + req[offset + 4];
             uint16_t or = (req[offset + 5] << 8) + req[offset + 6];
-
-            data = (data & and) | (or & (~and));
-            mb_mapping->tab_registers[mapping_address] = data;
 
             rsp_length = compute_response_length_from_request(ctx, (uint8_t *) req);
             if (rsp_length != req_length) {
@@ -1171,6 +1168,10 @@ int modbus_reply(modbus_t *ctx,
                                                 req_length);
                 break;
             }
+
+            data = mb_mapping->tab_registers[mapping_address];
+            data = (data & and) | (or & (~and));
+            mb_mapping->tab_registers[mapping_address] = data;
 
             rsp_length -= ctx->backend->checksum_length;
             memcpy(rsp, req, rsp_length);
