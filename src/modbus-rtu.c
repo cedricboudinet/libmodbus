@@ -1160,17 +1160,20 @@ static void _modbus_rtu_close(modbus_t *ctx)
     modbus_rtu_t *ctx_rtu = ctx->backend_data;
 
 #if defined(_WIN32)
-    /* Revert settings */
-    if (!SetCommState(ctx_rtu->w_ser.fd, &ctx_rtu->old_dcb) && ctx->debug) {
-        fprintf(stderr,
-                "ERROR Couldn't revert to configuration (LastError %d)\n",
-                (int) GetLastError());
-    }
+    if (ctx_rtu->w_ser.fd != INVALID_HANDLE_VALUE) {
+        /* Revert settings */
+        if (!SetCommState(ctx_rtu->w_ser.fd, &ctx_rtu->old_dcb) && ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Couldn't revert to configuration (LastError %d)\n",
+                    (int) GetLastError());
+        }
 
-    if (!CloseHandle(ctx_rtu->w_ser.fd) && ctx->debug) {
-        fprintf(stderr,
-                "ERROR Error while closing handle (LastError %d)\n",
-                (int) GetLastError());
+        if (!CloseHandle(ctx_rtu->w_ser.fd) && ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Error while closing handle (LastError %d)\n",
+                    (int) GetLastError());
+        }
+        ctx_rtu->w_ser.fd = INVALID_HANDLE_VALUE;
     }
 #elif defined(HAVE_STRUCT_TERMIOS2)
     if (ctx->s >= 0) {
@@ -1319,6 +1322,10 @@ modbus_new_rtu(const char *device, int baud, char parity, int data_bit, int stop
         return NULL;
     }
     ctx_rtu = (modbus_rtu_t *) ctx->backend_data;
+
+#if defined(_WIN32)
+    ctx_rtu->w_ser.fd = INVALID_HANDLE_VALUE;
+#endif
 
     /* Device name and \0 */
     ctx_rtu->device = (char *) malloc((strlen(device) + 1) * sizeof(char));
