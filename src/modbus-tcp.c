@@ -571,7 +571,6 @@ static int _modbus_tcp_flush(modbus_t *ctx)
                 rc_sum += rc;
             } else {
                 // Handle overflow
-                ctx->error_recovery = MODBUS_ERROR_RECOVERY_PROTOCOL;
                 errno = EOVERFLOW;
                 return -1;
             }
