@@ -143,9 +143,13 @@ int main(int argc, char *argv[])
             /* Filtered queries return 0 */
         } while (rc == 0);
 
-        /* The connection is not closed on errors which require on reply such as
+        /* The connection is not closed on errors which require no reply such as
            bad CRC in RTU. */
-        if (rc == -1 && errno != EMBBADCRC) {
+        if (rc == -1) {
+            if (errno == EMBBADCRC) {
+                /* Wait for the next request, the query is unusable */
+                continue;
+            }
             /* Quit */
             break;
         }
