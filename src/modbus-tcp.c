@@ -1026,6 +1026,7 @@ modbus_t *modbus_new_tcp(const char *ip, int port)
         }
     } else {
         ctx_tcp->ip[0] = '0';
+        ctx_tcp->ip[1] = '\0';
     }
     ctx_tcp->port = port;
     ctx_tcp->t_id = 0;
