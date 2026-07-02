@@ -187,7 +187,9 @@ static int send_msg(modbus_t *ctx, uint8_t *msg, int msg_length)
             _error_print(ctx, NULL);
             if (ctx->error_recovery & MODBUS_ERROR_RECOVERY_LINK) {
 #ifdef _WIN32
+                int saved_errno = errno;
                 const int wsa_err = WSAGetLastError();
+
                 if (wsa_err == WSAENETRESET || wsa_err == WSAENOTCONN ||
                     wsa_err == WSAENOTSOCK || wsa_err == WSAESHUTDOWN ||
                     wsa_err == WSAEHOSTUNREACH || wsa_err == WSAECONNABORTED ||
@@ -199,6 +201,7 @@ static int send_msg(modbus_t *ctx, uint8_t *msg, int msg_length)
                     _sleep_response_timeout(ctx);
                     modbus_flush(ctx);
                 }
+                errno = saved_errno;
 #else
                 int saved_errno = errno;
 
@@ -428,6 +431,8 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
             _error_print(ctx, "select");
             if (ctx->error_recovery & MODBUS_ERROR_RECOVERY_LINK) {
 #ifdef _WIN32
+                int saved_errno = errno;
+
                 wsa_err = WSAGetLastError();
 
                 // no equivalent to ETIMEDOUT when select fails on Windows
@@ -435,6 +440,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
                     modbus_close(ctx);
                     modbus_connect(ctx);
                 }
+                errno = saved_errno;
 #else
                 int saved_errno = errno;
 
@@ -466,8 +472,11 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
                  wsa_err == WSAENOTSOCK || wsa_err == WSAESHUTDOWN ||
                  wsa_err == WSAECONNABORTED || wsa_err == WSAETIMEDOUT ||
                  wsa_err == WSAECONNRESET)) {
+                int saved_errno = errno;
                 modbus_close(ctx);
                 modbus_connect(ctx);
+                /* Could be removed by previous calls */
+                errno = saved_errno;
             }
 #else
             if ((ctx->error_recovery & MODBUS_ERROR_RECOVERY_LINK) &&
