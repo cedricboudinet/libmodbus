@@ -989,7 +989,9 @@ modbus_t *modbus_new_tcp(const char *ip, int port)
        handler for SIGPIPE. */
     struct sigaction sa;
 
+    memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
     if (sigaction(SIGPIPE, &sa, NULL) < 0) {
         /* The debug flag can't be set here... */
         fprintf(stderr, "Could not install SIGPIPE handler.\n");
