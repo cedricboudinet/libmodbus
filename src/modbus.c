@@ -236,7 +236,7 @@ int modbus_send_raw_request_tid(modbus_t *ctx,
     uint8_t req[MAX_MESSAGE_LENGTH];
     int req_length;
 
-    if (ctx == NULL) {
+    if (ctx == NULL || raw_req == NULL) {
         errno = EINVAL;
         return -1;
     }
