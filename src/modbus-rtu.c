@@ -296,7 +296,14 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
         if (total_delay > 1000000000ULL) {
             total_delay = 1000000000ULL;
         }
-        usleep((useconds_t) total_delay);
+        /* POSIX allows usleep() to fail with EINVAL for values >= 1 second
+           so sleep in chunks below that limit */
+        while (total_delay > 0) {
+            useconds_t delay =
+                (total_delay > 999999ULL) ? 999999 : (useconds_t) total_delay;
+            usleep(delay);
+            total_delay -= delay;
+        }
         ctx_rtu->set_rts(ctx, ctx_rtu->rts != MODBUS_RTU_RTS_UP);
 
         return size;
