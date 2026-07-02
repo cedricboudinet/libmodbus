@@ -14,7 +14,6 @@
 #endif
 
 #include <string.h>
-#include <assert.h>
 
 #if defined(_WIN32)
 #  include <winsock2.h>
@@ -64,9 +63,8 @@ uint8_t modbus_get_byte_from_bits(const uint8_t *src, int idx, unsigned int nb_b
     unsigned int i;
     uint8_t value = 0;
 
+    /* A byte contains 8 bits at most */
     if (nb_bits > 8) {
-        /* Assert is ignored if NDEBUG is set */
-        assert(nb_bits < 8);
         nb_bits = 8;
     }
 
