@@ -1,6 +1,6 @@
 # NEWS
 
-## libmodbus 3.2.0 (2026-07-XX)
+## libmodbus 3.2.0 (2026-07-02)
 
 - Add `modbus_proxy()` to bridge two Modbus backends (closes #70).
 - Add termios2 support to allow custom baud rates (RTU).
@@ -37,6 +37,25 @@
 - modbus-rtu: report a failure to restore termios settings on close.
 - `modbus_new_rtu`: reject negative baud rates.
 - modbus-tcp: guard `freeaddrinfo()` against NULL on resolver failure.
+- `modbus_new_tcp`: NUL-terminate the IP string when `ip` is NULL.
+- `modbus_reply`: validate FC22 request length before writing the register.
+- modbus-tcp: keep `ctx->s` consistent across failed or repeated connects (no
+  false success on a stale descriptor, no socket leak on reconnect).
+- modbus-tcp: don't override the user error recovery mode in the flush overflow
+  path.
+- modbus-tcp: fully initialize the sigaction struct for the SIGPIPE handler on
+  BSD.
+- modbus-rtu: fix the Windows serial handle lifecycle (initialize the handle,
+  guard close against a never-opened handle and reset it after close).
+- modbus-rtu: sleep the RTS turnaround delay in chunks to stay portable with
+  `usleep()`.
+- `modbus_new_rtu`: validate `data_bit` and `stop_bit` arguments.
+- `modbus_send_raw_request_tid`: reject NULL `raw_req` with `EINVAL`.
+- `modbus_get_byte_from_bits`: remove an always-false assert and clamp `nb_bits`
+  consistently in debug and release builds.
+- Preserve errno across the Windows error-recovery paths.
+- tests: don't kill the unit test server on RTU bad-CRC frames.
+- tests: fix integer overflow in the bandwidth-client rate computation.
 
 ## libmodbus 3.1.12 (2026-02-13)
 
