@@ -1357,13 +1357,16 @@ int modbus_proxy(modbus_t *frontend_ctx,
     memcpy(backend_req, req + frontend_header_length - 1, pdu_length + 1);
     backend_req_length = pdu_length + 1;
 
-    /* Preserve the transaction ID from the frontend request */
+    /* Keep the transaction ID of the frontend request to restore it in the
+       response sent to the frontend */
     sft.slave = backend_req[0];
     sft.function = backend_req[1];
     sft.t_id = frontend_ctx->backend->get_response_tid(req);
 
     /* Send the request to the backend device using raw request.
-       modbus_send_raw_request_tid wraps the PDU into the backend framing. */
+       modbus_send_raw_request_tid wraps the PDU into the backend framing.
+       The backend request uses transaction ID 0 and the pre-check of the
+       confirmation below relies on it (check_sft.t_id) */
     rc = modbus_send_raw_request_tid(
         backend_ctx, backend_req, backend_req_length, 0);
     if (rc == -1) {
