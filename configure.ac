@@ -167,6 +167,7 @@ AC_ARG_ENABLE(tests,
 	[Build tests (default: yes)]),,
 	[enable_tests=yes])
 AM_CONDITIONAL(BUILD_TESTS, [test $enable_tests != no])
+AM_CONDITIONAL(BUILD_DOC, test "x$ac_libmodbus_build_doc" = "xyes")
 
 AC_CONFIG_HEADERS([config.h tests/unit-test.h])
 AC_CONFIG_FILES([
@@ -175,6 +176,7 @@ AC_CONFIG_FILES([
         src/modbus-version.h
         src/win32/modbus.dll.manifest
         tests/Makefile
+        docs/Makefile
         libmodbus.pc
 ])
 
